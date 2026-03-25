@@ -15,7 +15,8 @@ class Settings(BaseSettings):
     PORT: int = int(os.getenv("PORT", 8000))
 
     # Database (Railway provides DATABASE_URL automatically)
-    DATABASE_URL: str = "sqlite:///./ocr_workflow.db"
+    # Use /tmp for Railway (read-only filesystem elsewhere)
+    DATABASE_URL: str = os.getenv("DATABASE_URL", f"sqlite:///{os.path.join(os.getenv('TMPDIR', '/tmp'), 'ocr_workflow.db')}")
 
     # Redis (Railway provides REDIS_URL automatically)
     REDIS_URL: str = "redis://localhost:6379/0"
@@ -31,7 +32,8 @@ class Settings(BaseSettings):
     MODEL_CACHE_DIR: str = "/workspace/ocr-workflow/models"
 
     # File Storage
-    UPLOAD_DIR: str = "/workspace/ocr-workflow/uploads"
+    # Use /tmp for Railway (read-only filesystem elsewhere)
+    UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", os.path.join(os.getenv('TMPDIR', '/tmp'), 'uploads'))
     MAX_FILE_SIZE: int = 50 * 1024 * 1024  # 50MB
 
     # Confidence Thresholds
