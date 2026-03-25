@@ -8,12 +8,12 @@ from datetime import datetime
 
 from ..database import get_db
 from ..models import Document, ErrorRecord
-from ...config import settings
-from ...ocr_pipeline import OCRProcessor
+from config import settings
+from ocr_pipeline import OCRProcessor
 
 # ML imports (optional - may not be available in all deployments)
 try:
-    from ...ai_analysis import DictaBERTAnalyzer, CorrectionSuggester
+    from ai_analysis import DictaBERTAnalyzer, CorrectionSuggester
     ML_AVAILABLE = True
 except ImportError:
     ML_AVAILABLE = False
