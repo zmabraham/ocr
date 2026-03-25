@@ -10,14 +10,22 @@ from ..database import get_db
 from ..models import Document, ErrorRecord
 from ...config import settings
 from ...ocr_pipeline import OCRProcessor
-from ...ai_analysis import DictaBERTAnalyzer, CorrectionSuggester
+
+# ML imports (optional - may not be available in all deployments)
+try:
+    from ...ai_analysis import DictaBERTAnalyzer, CorrectionSuggester
+    ML_AVAILABLE = True
+except ImportError:
+    ML_AVAILABLE = False
+    DictaBERTAnalyzer = None
+    CorrectionSuggester = None
 
 router = APIRouter()
 
 # Initialize processors
 ocr_processor = OCRProcessor()
-dicta_analyzer = DictaBERTAnalyzer()
-correction_suggester = CorrectionSuggester()
+dicta_analyzer = DictaBERTAnalyzer() if ML_AVAILABLE else None
+correction_suggester = CorrectionSuggester() if ML_AVAILABLE else None
 
 
 @router.post("/upload", response_model=dict)
@@ -155,29 +163,33 @@ async def process_document(doc_id: str, db: Session):
         document.status = "ready"
         db.commit()
 
-        # Run AI analysis to detect errors
-        analysis = dicta_analyzer.analyze_text(ocr_result.text, ocr_result.words)
-        document.hebrew_percentage = analysis.hebrew_percentage
+        # Run AI analysis to detect errors (if available)
+        if ML_AVAILABLE and dicta_analyzer:
+            analysis = dicta_analyzer.analyze_text(ocr_result.text, ocr_result.words)
+            document.hebrew_percentage = analysis.hebrew_percentage
 
-        # Create error records for low-confidence words
-        for error in analysis.errors:
-            suggestions = correction_suggester.suggest_corrections(
-                error.word,
-                error.context,
-                dicta_suggestions=error.suggestions
-            )
+            # Create error records for low-confidence words
+            for error in analysis.errors:
+                suggestions = correction_suggester.suggest_corrections(
+                    error.word,
+                    error.context,
+                    dicta_suggestions=error.suggestions
+                )
 
-            error_record = ErrorRecord(
-                id=str(uuid.uuid4()),
-                document_id=doc_id,
-                original_word=error.word,
-                position=error.position,
-                confidence=error.confidence,
-                context=error.context,
-                bbox=error.bbox,
-                suggestions=suggestions
-            )
-            db.add(error_record)
+                error_record = ErrorRecord(
+                    id=str(uuid.uuid4()),
+                    document_id=doc_id,
+                    original_word=error.word,
+                    position=error.position,
+                    confidence=error.confidence,
+                    context=error.context,
+                    bbox=error.bbox,
+                    suggestions=suggestions
+                )
+                db.add(error_record)
+        else:
+            # ML not available - mark as ready without error detection
+            document.hebrew_percentage = 0.0
 
         document.status = "completed"
         db.commit()
