@@ -1,5 +1,6 @@
 {
   "buildCommand": "cd review_ui && npm install && npm run build",
   "outputDirectory": "review_ui/dist",
-  "framework": "vite"
+  "framework": null,
+  "installCommand": "cd review_ui && npm install"
 }
