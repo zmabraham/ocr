@@ -43,7 +43,8 @@ class OCRProcessor:
         self.lang = settings.TESSERACT_LANG
 
         # Configure Tesseract for Hebrew
-        self.tesseract_config = r'--oem 1 --psm 6 -c tessedit_create_hocr 1'
+        # OEM 1 = LSTM neural net, PSM 6 = uniform block of text
+        self.tesseract_config = '--oem 1 --psm 6'
 
     def process_pdf(self, file_path: str, dpi: int = 300) -> OCRResult:
         """
