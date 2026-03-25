@@ -28,7 +28,7 @@ class Document(Base):
 
     @property
     def progress_percentage(self) -> float:
-        if self.total_pages == 0:
+        if self.total_pages is None or self.total_pages == 0:
             return 0.0
         return (self.processed_pages / self.total_pages) * 100
 
