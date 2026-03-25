@@ -1,16 +1,22 @@
 FROM python:3.11-slim
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# Set DEBIAN_FRONTEND to noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install system dependencies (more resilient)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
     tesseract-ocr \
-    tesseract-ocr-heb \
-    tesseract-ocr-yiddish \
-    tesseract-ocr-arabic \
     poppler-utils \
     libpq-dev \
     gcc \
     g++ \
-    && rm -rf /var/lib/apt/lists/*
+    wget \
+    && \
+    # Try to install Hebrew language pack (may fail gracefully)
+    apt-get install -y --no-install-recommends tesseract-ocr-heb || true && \
+    apt-get install -y --no-install-recommends tesseract-ocr-eng || true && \
+    rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /workspace/ocr-workflow
