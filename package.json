@@ -1,4 +1,14 @@
 {
+  "name": "hebrew-ocr-workflow",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "cd review_ui && npm install && npm run build",
+    "dev": "cd review_ui && npm run dev"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "@railway/cli": "^4.34.0"
   }
