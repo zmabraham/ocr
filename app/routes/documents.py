@@ -22,10 +22,34 @@ except ImportError:
 
 router = APIRouter()
 
-# Initialize processors
-ocr_processor = OCRProcessor()
-dicta_analyzer = DictaBERTAnalyzer() if ML_AVAILABLE else None
-correction_suggester = CorrectionSuggester() if ML_AVAILABLE else None
+# Initialize processors (lazy initialization)
+_ocr_processor = None
+_dicta_analyzer = None
+_correction_suggester = None
+
+
+def get_ocr_processor():
+    """Get or create OCR processor (lazy initialization)"""
+    global _ocr_processor
+    if _ocr_processor is None:
+        _ocr_processor = OCRProcessor()
+    return _ocr_processor
+
+
+def get_dicta_analyzer():
+    """Get or create DictaBERT analyzer (lazy initialization)"""
+    global _dicta_analyzer
+    if _dicta_analyzer is None and ML_AVAILABLE:
+        _dicta_analyzer = DictaBERTAnalyzer()
+    return _dicta_analyzer
+
+
+def get_correction_suggester():
+    """Get or create correction suggester (lazy initialization)"""
+    global _correction_suggester
+    if _correction_suggester is None and ML_AVAILABLE:
+        _correction_suggester = CorrectionSuggester()
+    return _correction_suggester
 
 
 @router.post("/upload", response_model=dict)
@@ -152,8 +176,11 @@ async def process_document(doc_id: str, db: Session):
         document.status = "processing"
         db.commit()
 
+        # Get OCR processor (lazy initialization)
+        ocr = get_ocr_processor()
+
         # Run OCR
-        ocr_result = ocr_processor.process_pdf(document.original_path)
+        ocr_result = ocr.process_pdf(document.original_path)
 
         # Update document with OCR results
         document.total_pages = ocr_result.pages
@@ -164,13 +191,16 @@ async def process_document(doc_id: str, db: Session):
         db.commit()
 
         # Run AI analysis to detect errors (if available)
-        if ML_AVAILABLE and dicta_analyzer:
-            analysis = dicta_analyzer.analyze_text(ocr_result.text, ocr_result.words)
+        dicta = get_dicta_analyzer()
+        corrector = get_correction_suggester()
+
+        if ML_AVAILABLE and dicta and corrector:
+            analysis = dicta.analyze_text(ocr_result.text, ocr_result.words)
             document.hebrew_percentage = analysis.hebrew_percentage
 
             # Create error records for low-confidence words
             for error in analysis.errors:
-                suggestions = correction_suggester.suggest_corrections(
+                suggestions = corrector.suggest_corrections(
                     error.word,
                     error.context,
                     dicta_suggestions=error.suggestions

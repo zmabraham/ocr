@@ -38,4 +38,5 @@ ENV PYTHONPATH=/workspace/ocr-workflow
 EXPOSE 8000
 
 # Default command - Railway provides PORT env var
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "${PORT}"]
+# Use shell form to expand environment variables
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT}

@@ -1,0 +1,26 @@
+# Lightweight requirements for Railway (without heavy ML packages initially)
+# Core Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# OCR
+pytesseract==0.3.10
+pdf2image==1.16.0
+Pillow==10.0.0
+
+# Image Processing (lighter)
+numpy==1.24.3
+
+# Database
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+
+# Utilities
+pydantic==2.5.0
+pydantic-settings==2.1.0
+redis==5.0.1
+
+# ML (lighter versions - can add torch later if needed)
+transformers[torch]==4.37.0
+sentencepiece==0.1.99
