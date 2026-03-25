@@ -21,15 +21,27 @@ def get_engine():
     """Get or create database engine"""
     global _engine, _SessionLocal
     if _engine is None:
+        # For SQLite, ensure parent directory exists
+        db_url = settings.DATABASE_URL
+        if db_url.startswith("sqlite:///"):
+            import os
+            db_path = db_url.replace("sqlite:///", "")
+            db_dir = os.path.dirname(db_path)
+            if db_dir:
+                os.makedirs(db_dir, exist_ok=True)
+            logger.info(f"SQLite database path: {db_path}")
+
         _engine = create_engine(
-            settings.DATABASE_URL,
+            db_url,
             poolclass=QueuePool,
             pool_size=10,
             max_overflow=20,
             pool_pre_ping=True,
-            echo=settings.DEBUG
+            echo=settings.DEBUG,
+            connect_args={"check_same_thread": False} if db_url.startswith("sqlite") else {}
         )
         _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
+        logger.info("Database engine created successfully")
     return _engine
 
 
@@ -43,15 +55,26 @@ def get_SessionLocal():
 # Legacy compatibility - create engine on import for now
 # This will be replaced with lazy loading
 try:
+    db_url = settings.DATABASE_URL
+    if db_url.startswith("sqlite:///"):
+        import os
+        db_path = db_url.replace("sqlite:///", "")
+        db_dir = os.path.dirname(db_path)
+        if db_dir:
+            os.makedirs(db_dir, exist_ok=True)
+        logger.info(f"SQLite database path: {db_path}")
+
     engine = create_engine(
-        settings.DATABASE_URL,
+        db_url,
         poolclass=QueuePool,
         pool_size=10,
         max_overflow=20,
         pool_pre_ping=True,
-        echo=settings.DEBUG
+        echo=settings.DEBUG,
+        connect_args={"check_same_thread": False} if db_url.startswith("sqlite") else {}
     )
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    logger.info("Legacy database engine created successfully")
 except Exception as e:
     logger.warning(f"Could not create database engine: {e}")
     engine = None
