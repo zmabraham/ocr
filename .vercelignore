@@ -1,0 +1,14 @@
+# Ignore Python backend files for Vercel frontend deployment
+requirements.txt
+requirements-railway.txt
+app/
+ocr_pipeline/
+ai_analysis/
+workflow/
+tests/
+Dockerfile
+docker-compose.yml
+railway.toml
+.env.example
+*.py
+!review_ui/
