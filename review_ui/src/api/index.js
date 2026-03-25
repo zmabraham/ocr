@@ -1,7 +1,12 @@
 import axios from 'axios'
 
+// Use Railway backend in production, localhost in development
+const baseURL = import.meta.env.PROD
+  ? 'https://ocr-production-e0be.up.railway.app/api'
+  : '/api'
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL,
   headers: {
     'Content-Type': 'application/json'
   }
