@@ -34,8 +34,8 @@ RUN mkdir -p uploads models
 # Set Python path
 ENV PYTHONPATH=/workspace/ocr-workflow
 
-# Expose port (Railway sets PORT env var)
+# Expose port
 EXPOSE 8000
 
-# Default command (use PORT from environment)
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Default command - Railway provides PORT env var
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "${PORT}"]

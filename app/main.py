@@ -3,12 +3,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import logging
+import os
 
 from config import settings
 from .database import init_db, engine
 from .routes import documents, reviews, export
 
 logger = logging.getLogger(__name__)
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 # Create FastAPI app
 app = FastAPI(
@@ -56,6 +60,12 @@ async def root():
 @app.on_event("startup")
 async def startup_event():
     """Initialize database on startup"""
+    logger.info("=" * 50)
+    logger.info("STARTUP: Application starting...")
+    logger.info(f"PORT: {os.getenv('PORT', 'not set')}")
+    logger.info(f"DATABASE_URL: {settings.DATABASE_URL[:50]}...")
+    logger.info(f"REDIS_URL: {settings.REDIS_URL[:50]}...")
+
     try:
         logger.info("Initializing database...")
         init_db()
@@ -63,6 +73,8 @@ async def startup_event():
     except Exception as e:
         logger.warning(f"Database initialization failed: {e}")
         logger.info(f"{settings.APP_NAME} started without database")
+
+    logger.info("=" * 50)
 
 
 @app.on_event("shutdown")
