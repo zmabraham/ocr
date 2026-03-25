@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import torch
 from transformers import AutoTokenizer, AutoModelForMaskedLM
 
-from ..config import settings
+from config import settings
 
 
 @dataclass

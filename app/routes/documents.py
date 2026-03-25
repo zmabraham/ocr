@@ -11,12 +11,17 @@ from ..models import Document, ErrorRecord
 from config import settings
 
 # OCR processor (optional - may not be available in all deployments)
+import logging
+logger = logging.getLogger(__name__)
+
 try:
     from ocr_pipeline import OCRProcessor
     OCR_AVAILABLE = True
-except ImportError:
+    logger.info("OCR processor loaded successfully")
+except Exception as e:
     OCR_AVAILABLE = False
     OCRProcessor = None
+    logger.error(f"Failed to import OCR processor: {e}")
 
 # ML imports (optional - may not be available in all deployments)
 try:

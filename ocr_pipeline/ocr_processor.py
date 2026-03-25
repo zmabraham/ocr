@@ -22,7 +22,7 @@ except ImportError:
     CV2_AVAILABLE = False
     cv2 = None
 
-from ..config import settings
+from config import settings
 
 
 @dataclass
