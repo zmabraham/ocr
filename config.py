@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     PORT: int = int(os.getenv("PORT", 8000))
 
     # Database (Railway provides DATABASE_URL automatically)
-    DATABASE_URL: str = "postgresql://user:password@localhost/ocr_workflow"
+    DATABASE_URL: str = "sqlite:///./ocr_workflow.db"
 
     # Redis (Railway provides REDIS_URL automatically)
     REDIS_URL: str = "redis://localhost:6379/0"
