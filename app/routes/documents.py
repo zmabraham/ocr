@@ -9,7 +9,14 @@ from datetime import datetime
 from ..database import get_db
 from ..models import Document, ErrorRecord
 from config import settings
-from ocr_pipeline import OCRProcessor
+
+# OCR processor (optional - may not be available in all deployments)
+try:
+    from ocr_pipeline import OCRProcessor
+    OCR_AVAILABLE = True
+except ImportError:
+    OCR_AVAILABLE = False
+    OCRProcessor = None
 
 # ML imports (optional - may not be available in all deployments)
 try:
@@ -31,7 +38,7 @@ _correction_suggester = None
 def get_ocr_processor():
     """Get or create OCR processor (lazy initialization)"""
     global _ocr_processor
-    if _ocr_processor is None:
+    if _ocr_processor is None and OCR_AVAILABLE:
         _ocr_processor = OCRProcessor()
     return _ocr_processor
 
@@ -178,6 +185,13 @@ async def process_document(doc_id: str, db: Session):
 
         # Get OCR processor (lazy initialization)
         ocr = get_ocr_processor()
+
+        if not ocr:
+            # OCR not available - mark as error for now
+            document.status = "error"
+            document.ocr_text = "OCR processing not available - ocr_pipeline module not installed"
+            db.commit()
+            return
 
         # Run OCR
         ocr_result = ocr.process_pdf(document.original_path)
