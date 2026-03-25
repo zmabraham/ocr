@@ -115,14 +115,22 @@ class OCRProcessor:
         words = []
         confidences = []
 
-        for item in data:
-            if item.get('text') and item['text'].strip():
-                conf = item.get('conf', 0)
+        # Output.DICT returns dict with lists, iterate by index
+        n_results = len(data.get('text', []))
+        for i in range(n_results):
+            text_val = data.get('text', [])[i]
+            if text_val and text_val.strip():
+                conf = data.get('conf', [0])[i]
+                left = data.get('left', [0])[i]
+                top = data.get('top', [0])[i]
+                width = data.get('width', [0])[i]
+                height = data.get('height', [0])[i]
+
                 words.append({
-                    'text': item['text'],
-                    'bbox': item.get('bbox', []),
+                    'text': text_val,
+                    'bbox': [left, top, left + width, top + height],
                     'confidence': conf,
-                    'page_num': item.get('page_num', 0)
+                    'page_num': data.get('page_num', [1])[i]
                 })
                 confidences.append(conf)
 
