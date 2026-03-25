@@ -56,9 +56,13 @@ async def root():
 @app.on_event("startup")
 async def startup_event():
     """Initialize database on startup"""
-    logger.info("Initializing database...")
-    init_db()
-    logger.info(f"{settings.APP_NAME} started successfully")
+    try:
+        logger.info("Initializing database...")
+        init_db()
+        logger.info(f"{settings.APP_NAME} started successfully")
+    except Exception as e:
+        logger.warning(f"Database initialization failed: {e}")
+        logger.info(f"{settings.APP_NAME} started without database")
 
 
 @app.on_event("shutdown")
