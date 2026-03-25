@@ -14,6 +14,14 @@ except ImportError as e:
     print(f"Missing dependency: {e}")
     raise
 
+# cv2 is optional - used for image denoising
+try:
+    import cv2
+    CV2_AVAILABLE = True
+except ImportError:
+    CV2_AVAILABLE = False
+    cv2 = None
+
 from ..config import settings
 
 
@@ -156,7 +164,9 @@ class OCRProcessor:
 
     def _denoise(self, img_array: np.ndarray) -> np.ndarray:
         """Apply denoising to image array"""
-        import cv2
+        if not CV2_AVAILABLE:
+            # Return original if cv2 not available
+            return img_array
 
         # Use OpenCV for denoising
         denoised = cv2.fastNlMeansDenoising(img_array, None, h=10)
@@ -197,6 +207,10 @@ class ImageAnalyzer:
         Returns:
             List of text regions with bounding box coordinates
         """
+        if not CV2_AVAILABLE:
+            # Return empty list if cv2 not available
+            return []
+
         import cv2
 
         img = cv2.imread(image_path)
