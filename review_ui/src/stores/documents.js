@@ -23,6 +23,21 @@ export const useDocumentsStore = defineStore('documents', () => {
     }
   }
 
+  // Upload with progress tracking
+  const uploadDocumentWithProgress = async (file, onProgress) => {
+    loading.value = true
+    error.value = null
+    try {
+      const result = await documentsApi.uploadWithProgress(file, onProgress)
+      return result
+    } catch (e) {
+      error.value = e.message
+      throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
   const fetchDocuments = async () => {
     loading.value = true
     error.value = null
@@ -40,8 +55,10 @@ export const useDocumentsStore = defineStore('documents', () => {
     error.value = null
     try {
       currentDocument.value = await documentsApi.get(documentId)
+      return currentDocument.value
     } catch (e) {
       error.value = e.message
+      throw e
     } finally {
       loading.value = false
     }
@@ -72,6 +89,7 @@ export const useDocumentsStore = defineStore('documents', () => {
     loading,
     error,
     uploadDocument,
+    uploadDocumentWithProgress,
     fetchDocuments,
     fetchDocument,
     deleteDocument,

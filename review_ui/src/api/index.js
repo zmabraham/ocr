@@ -22,6 +22,50 @@ export const documentsApi = {
     return response.data
   },
 
+  // Upload with progress tracking using XMLHttpRequest
+  uploadWithProgress: (file, onProgress) => {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+      const formData = new FormData()
+      formData.append('file', file)
+
+      // Track upload progress
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          const percent = Math.round((e.loaded / e.total) * 100)
+          onProgress({
+            percent,
+            loaded: e.loaded,
+            total: e.total
+          })
+        }
+      })
+
+      // Handle completion
+      xhr.addEventListener('load', () => {
+        if (xhr.status === 200) {
+          const response = JSON.parse(xhr.responseText)
+          resolve(response)
+        } else {
+          reject(new Error(`Upload failed with status ${xhr.status}`))
+        }
+      })
+
+      // Handle errors
+      xhr.addEventListener('error', () => {
+        reject(new Error('Upload failed - network error'))
+      })
+
+      xhr.addEventListener('abort', () => {
+        reject(new Error('Upload aborted'))
+      })
+
+      // Open and send request
+      xhr.open('POST', `${baseURL}/documents/upload`)
+      xhr.send(formData)
+    })
+  },
+
   get: async (documentId) => {
     const response = await api.get(`/documents/${documentId}`)
     return response.data
