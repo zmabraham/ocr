@@ -29,7 +29,8 @@ class Settings(BaseSettings):
     DICTABERT_MODEL: str = "dicta-il/dictabert"
     DICTABERT_MORPH_MODEL: str = "dicta-il/dictabert-morph"
     HEBERT_MODEL: str = "avichr/heBERT"
-    MODEL_CACHE_DIR: str = "/workspace/ocr-workflow/models"
+    # Use /tmp for model cache on Railway (read-only filesystem elsewhere)
+    MODEL_CACHE_DIR: str = os.path.join(os.getenv('TMPDIR', '/tmp'), 'models')
 
     # File Storage
     # Use /tmp for Railway (read-only filesystem elsewhere)

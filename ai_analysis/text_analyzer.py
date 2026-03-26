@@ -1,8 +1,20 @@
 """Hebrew Text Analysis using DictaBERT"""
+import os
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass
 import torch
-from transformers import AutoTokenizer, AutoModelForMaskedLM
+
+# Set cache directory BEFORE importing transformers
+os.environ['TRANSFORMERS_CACHE'] = os.environ.get('TRANSFORMERS_CACHE', os.path.join(os.getenv('TMPDIR', '/tmp'), 'models'))
+os.environ['HF_HOME'] = os.environ.get('HF_HOME', os.path.join(os.getenv('TMPDIR', '/tmp'), 'models'))
+
+try:
+    from transformers import AutoTokenizer, AutoModelForMaskedLM
+    TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    TRANSFORMERS_AVAILABLE = False
+    AutoTokenizer = None
+    AutoModelForMaskedLM = None
 
 from config import settings
 
@@ -31,15 +43,41 @@ class DictaBERTAnalyzer:
     """Analyze Hebrew text using DictaBERT models"""
 
     def __init__(self):
+        if not TRANSFORMERS_AVAILABLE:
+            raise ImportError("Transformers library not available")
+
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         print(f"Using device: {self.device}")
 
-        # Load base DictaBERT model
+        # Create cache directory
+        os.makedirs(settings.MODEL_CACHE_DIR, exist_ok=True)
+
+        # Load base DictaBERT model with caching
         self.model_name = settings.DICTABERT_MODEL
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-        self.model = AutoModelForMaskedLM.from_pretrained(self.model_name)
-        self.model.to(self.device)
-        self.model.eval()
+        try:
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                self.model_name,
+                cache_dir=settings.MODEL_CACHE_DIR,
+                local_files_only=False
+            )
+            self.model = AutoModelForMaskedLM.from_pretrained(
+                self.model_name,
+                cache_dir=settings.MODEL_CACHE_DIR,
+                local_files_only=False
+            )
+            self.model.to(self.device)
+            self.model.eval()
+            self._available = True
+        except Exception as e:
+            print(f"Failed to load DictaBERT model: {e}")
+            self._available = False
+            self.tokenizer = None
+            self.model = None
+
+    @property
+    def available(self) -> bool:
+        """Check if the model is available for use"""
+        return self._available
 
     def analyze_text(self, ocr_text: str, ocr_words: List[Dict]) -> AnalysisResult:
         """
