@@ -70,7 +70,7 @@ async def upload_document(
     background_tasks: BackgroundTasks = None,
     db: Session = Depends(get_db)
 ):
-    """Upload a PDF document for OCR processing"""
+    """Upload a PDF document for OCR processing (streaming for large files)"""
     # Validate file type
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
@@ -82,12 +82,30 @@ async def upload_document(
     # Ensure upload directory exists
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 
-    # Save file
-    with open(upload_path, "wb") as f:
-        content = await file.read()
-        if len(content) > settings.MAX_FILE_SIZE:
-            raise HTTPException(status_code=400, detail="File too large")
-        f.write(content)
+    # Stream file to disk (better for large files - avoids loading all into memory)
+    size = 0
+    chunk_size = 1024 * 1024  # 1MB chunks
+    try:
+        with open(upload_path, "wb") as f:
+            while True:
+                chunk = await file.read(chunk_size)
+                if not chunk:
+                    break
+                size += len(chunk)
+                if size > settings.MAX_FILE_SIZE:
+                    # Remove partial file
+                    if os.path.exists(upload_path):
+                        os.remove(upload_path)
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"File too large (max {settings.MAX_FILE_SIZE // (1024*1024)}MB)"
+                    )
+                f.write(chunk)
+    except Exception as e:
+        # Clean up on error
+        if os.path.exists(upload_path):
+            os.remove(upload_path)
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
     # Create document record
     document = Document(
@@ -103,12 +121,117 @@ async def upload_document(
     if background_tasks:
         background_tasks.add_task(process_document, doc_id, db)
 
+    # Calculate estimated processing time
+    size_mb = size / (1024 * 1024)
+    estimated_minutes = max(3, (size_mb // 2) + 2)  # ~2MB/min + 2min overhead
+
     return {
         "document_id": doc_id,
         "filename": file.filename,
         "status": "pending",
-        "message": "Document uploaded successfully. OCR processing started."
+        "size_bytes": size,
+        "message": "Document uploaded successfully. OCR processing started.",
+        "estimated_time_minutes": estimated_minutes,
+        "is_large_file": size_mb > 10
     }
+
+
+@router.post("/upload/chunked", response_model=dict)
+async def upload_chunked_document(
+    file: UploadFile = File(...),
+    background_tasks: BackgroundTasks = None,
+    db: Session = Depends(get_db),
+    chunk_index: int = 0,
+    total_chunks: int = 1,
+    upload_id: str = None
+):
+    """
+    Upload document in chunks (for large files or unstable connections)
+
+    Usage:
+    1. Call with first chunk to get upload_id
+    2. Subsequent chunks use the same upload_id
+    3. After last chunk, document is queued for OCR
+    """
+    # Validate file type
+    if not file.filename.endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="Only PDF files are supported")
+
+    # Generate or use upload ID
+    if upload_id is None:
+        upload_id = str(uuid.uuid4())
+
+    upload_path = os.path.join(settings.UPLOAD_DIR, f"{upload_id}.pdf")
+    chunk_path = os.path.join(settings.UPLOAD_DIR, f"{upload_id}.part{chunk_index}")
+
+    # Ensure upload directory exists
+    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+
+    # Save chunk
+    size = 0
+    try:
+        with open(chunk_path, "wb") as f:
+            content = await file.read()
+            size = len(content)
+            if size > settings.MAX_FILE_SIZE:
+                raise HTTPException(status_code=400, detail="File too large")
+            f.write(content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Chunk upload failed: {str(e)}")
+
+    # If this is the last chunk, combine all parts
+    if chunk_index == total_chunks - 1:
+        try:
+            # Combine all chunks
+            with open(upload_path, "wb") as f:
+                for i in range(total_chunks):
+                    part_path = os.path.join(settings.UPLOAD_DIR, f"{upload_id}.part{i}")
+                    with open(part_path, "rb") as part:
+                        f.write(part.read())
+                    os.remove(part_path)  # Clean up chunk files
+
+            # Create document record
+            doc_id = str(uuid.uuid4())
+            document = Document(
+                id=doc_id,
+                filename=file.filename,
+                original_path=upload_path,
+                status="pending"
+            )
+            db.add(document)
+            db.commit()
+
+            # Queue OCR processing
+            if background_tasks:
+                background_tasks.add_task(process_document, doc_id, db)
+
+            size_mb = size / (1024 * 1024)
+            estimated_minutes = max(3, (size_mb // 2) + 2)
+
+            return {
+                "document_id": doc_id,
+                "upload_id": upload_id,
+                "filename": file.filename,
+                "status": "pending",
+                "size_bytes": size,
+                "chunk_index": chunk_index,
+                "total_chunks": total_chunks,
+                "is_complete": True,
+                "estimated_time_minutes": estimated_minutes,
+                "is_large_file": size_mb > 10,
+                "message": "All chunks received. OCR processing started."
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to combine chunks: {str(e)}")
+    else:
+        # Not the last chunk
+        return {
+            "upload_id": upload_id,
+            "chunk_index": chunk_index,
+            "total_chunks": total_chunks,
+            "is_complete": False,
+            "message": f"Chunk {chunk_index + 1} of {total_chunks} received. Send next chunk."
+        }
 
 
 @router.get("/{document_id}", response_model=dict)

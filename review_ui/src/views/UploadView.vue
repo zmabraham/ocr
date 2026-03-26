@@ -23,6 +23,13 @@
             <span class="file-size">{{ formatFileSize(selectedFile.size) }}</span>
             <Button label="Remove" icon="pi pi-times" severity="danger" text @click="selectedFile = null" />
           </div>
+
+          <!-- Large File Warning -->
+          <div class="large-file-warning" v-if="selectedFile && selectedFile.size > 10 * 1024 * 1024">
+            <p><strong>⚠️ Large file detected!</strong></p>
+            <p>Files over 10 MB may take 10+ minutes to process. Consider splitting your PDF into smaller files for faster processing.</p>
+            <p class="warning-detail">Upload will continue, but you can navigate away while it processes in the background.</p>
+          </div>
         </div>
 
         <!-- Upload Progress -->
