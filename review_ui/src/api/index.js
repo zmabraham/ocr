@@ -124,6 +124,13 @@ export const exportApi = {
     return response.data
   },
 
+  downloadWord: async (documentId) => {
+    const response = await api.get(`/export/document/${documentId}/word`, {
+      responseType: 'blob'
+    })
+    return response.data
+  },
+
   getCorrectionsLog: async (documentId) => {
     const response = await api.get(`/export/document/${documentId}/corrections-log`)
     return response.data
