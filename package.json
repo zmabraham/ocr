@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "cd review_ui && npm install && npm run build",
+    "build": "cd review_ui && npm run build",
     "dev": "cd review_ui && npm run dev"
   },
   "engines": {
