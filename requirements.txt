@@ -1,4 +1,4 @@
-# Lightweight requirements for Railway deployment
+# OCR Workflow Requirements with ML support
 # Core Framework
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
@@ -20,3 +20,9 @@ psycopg2-binary==2.9.9
 pydantic==2.5.0
 pydantic-settings==2.1.0
 redis==5.0.1
+
+# ML / AI for Hebrew text analysis
+torch==2.1.0
+transformers==4.37.0
+sentencepiece==0.1.99
+protobuf==4.25.1
